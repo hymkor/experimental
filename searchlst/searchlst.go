@@ -8,10 +8,13 @@ import (
 
 func main() {
 	filepath.Walk(".", func(path1 string, info os.FileInfo, err error) error {
-		if ! info.IsDir() {
+		if !info.IsDir() {
 			return nil
 		}
-		fmt.Println(path1[:len(path1)-4] + `\`)
+		if matched, err := filepath.Match(path1, "."); err != nil || matched {
+			return nil
+		}
+		fmt.Println(path1 + `\`)
 		return nil
 	})
 }
