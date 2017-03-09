@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,8 +15,22 @@ func main_(args []string) error {
 		return fmt.Errorf("Usage: %s URL FILENAME", args[0])
 	}
 	res, err := http.Get(args[1])
-	if err != nil {
-		return fmt.Errorf("%s: %s", args[1], err.Error())
+	for {
+		if err != nil {
+			return fmt.Errorf("%s: %s", args[1], err.Error())
+		}
+		if res.StatusCode >= 400 {
+			return errors.New(res.Status)
+		}
+		if res.StatusCode < 300 {
+			break
+		}
+		url := res.Header.Get("Location")
+		if url == "" {
+			return fmt.Errorf("Redirect: Location not found")
+		}
+		res.Body.Close()
+		res, err = http.Get(url)
 	}
 	defer res.Body.Close()
 	w, err2 := os.Create(args[2])
