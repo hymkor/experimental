@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/mattn/go-runewidth"
 	"io"
@@ -10,8 +11,8 @@ import (
 )
 
 const (
-	WIDE_SPACE   = "\u3000"
-	NARROW_SPACE = " "
+	WIDE_SPACE   rune = 0x3000
+	NARROW_SPACE rune = ' '
 )
 
 func read(r io.Reader, lines []string) []string {
@@ -55,18 +56,20 @@ func main() {
 		}
 		runes[i] = runes1
 	}
+	var buffer bytes.Buffer
 	for i := 0; i < max; i++ {
 		for j := len(runes) - 1; j >= 0; j-- {
 			if i >= len(runes[j]) {
-				fmt.Print(WIDE_SPACE)
+				buffer.WriteRune(WIDE_SPACE)
 			} else {
 				r := runes[j][i]
-				fmt.Printf("%c", r)
+				buffer.WriteRune(r)
 				if runewidth.RuneWidth(r) < 2 {
-					fmt.Print(NARROW_SPACE)
+					buffer.WriteRune(NARROW_SPACE)
 				}
 			}
 		}
-		fmt.Println()
+		fmt.Println(strings.TrimSuffix(buffer.String()," \r\n\t\u3000"))
+		buffer.Reset()
 	}
 }
