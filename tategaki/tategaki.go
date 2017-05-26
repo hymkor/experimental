@@ -6,6 +6,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"io"
 	"os"
+	"strings"
 )
 
 const (
@@ -16,8 +17,11 @@ const (
 func read(r io.Reader, lines []string) []string {
 	scnr := bufio.NewScanner(r)
 	for scnr.Scan() {
-		text := scnr.Text()
+		text := strings.TrimSpace(scnr.Text())
 		lines = append(lines, text)
+	}
+	for len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
 	}
 	return lines
 }
@@ -39,7 +43,7 @@ func main() {
 	}
 	runes := make([][]rune, len(lines))
 	max := 0
-	for _, line1 := range lines {
+	for i, line1 := range lines {
 		runes1 := make([]rune, 0, len(line1))
 		cnt := 0
 		for _, r := range line1 {
@@ -49,7 +53,7 @@ func main() {
 		if cnt > max {
 			max = cnt
 		}
-		runes = append(runes, runes1)
+		runes[i] = runes1
 	}
 	for i := 0; i < max; i++ {
 		for j := len(runes) - 1; j >= 0; j-- {
