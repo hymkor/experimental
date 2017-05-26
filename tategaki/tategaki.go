@@ -8,6 +8,11 @@ import (
 	"os"
 )
 
+const (
+	WIDE_SPACE   = "\u3000"
+	NARROW_SPACE = " "
+)
+
 func read(r io.Reader, lines []string) []string {
 	scnr := bufio.NewScanner(r)
 	for scnr.Scan() {
@@ -49,12 +54,12 @@ func main() {
 	for i := 0; i < max; i++ {
 		for j := len(runes) - 1; j >= 0; j-- {
 			if i >= len(runes[j]) {
-				fmt.Print("  ")
-			}else{
+				fmt.Print(WIDE_SPACE)
+			} else {
 				r := runes[j][i]
 				fmt.Printf("%c", r)
 				if runewidth.RuneWidth(r) < 2 {
-					fmt.Print(" ")
+					fmt.Print(NARROW_SPACE)
 				}
 			}
 		}
