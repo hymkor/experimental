@@ -15,6 +15,12 @@ const (
 	NARROW_SPACE rune = ' '
 )
 
+var replaceTable = strings.NewReplacer(
+	"ー", "│",
+	"「", "￢",
+	"」", "L",
+)
+
 func read(r io.Reader, lines []string) []string {
 	scnr := bufio.NewScanner(r)
 	for scnr.Scan() {
@@ -47,7 +53,7 @@ func main() {
 	for i, line1 := range lines {
 		runes1 := make([]rune, 0, len(line1))
 		cnt := 0
-		for _, r := range line1 {
+		for _, r := range replaceTable.Replace(line1) {
 			runes1 = append(runes1, r)
 			cnt++
 		}
@@ -69,7 +75,7 @@ func main() {
 				}
 			}
 		}
-		fmt.Println(strings.TrimSuffix(buffer.String()," \r\n\t\u3000"))
+		fmt.Println(strings.TrimSuffix(buffer.String(), " \r\n\t\u3000"))
 		buffer.Reset()
 	}
 }
