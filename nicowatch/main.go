@@ -4,10 +4,28 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 )
+
+func getRedirectUrl(url1 string) (string, error) {
+	client1 := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client1.Head(url1)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == 200 {
+		return url1, nil
+	} else {
+		return resp.Header.Get("Location"), nil
+	}
+}
 
 type UserT struct {
 	ScreenName string `json:"screen_name"`
@@ -39,7 +57,11 @@ func Main() error {
 		if urls != nil {
 			user := tweet1.User.ScreenName
 			for _, url1 := range urls {
-				fmt.Printf("%s %s\n", user, url1)
+				url2, err := getRedirectUrl(url1)
+				if err != nil {
+					return fmt.Errorf("%s %s", url1, err.Error())
+				}
+				fmt.Printf("%s %s\n", user, url2)
 			}
 		}
 	}
