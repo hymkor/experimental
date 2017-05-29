@@ -75,7 +75,7 @@ func main() {
 				}
 			}
 		}
-		fmt.Println(strings.TrimSuffix(buffer.String(), " \r\n\t\u3000"))
+		fmt.Println(strings.TrimRight(buffer.String(), " \r\n\t\u3000"))
 		buffer.Reset()
 	}
 }
