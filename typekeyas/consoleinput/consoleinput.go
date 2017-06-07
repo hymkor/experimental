@@ -1,4 +1,4 @@
-package writeconsole
+package consoleinput
 
 import (
 	"syscall"
