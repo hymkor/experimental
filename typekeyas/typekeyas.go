@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/zetamatta/experimental/writeconsole"
+	"github.com/zetamatta/experimental/typekeyas/consoleinput"
 )
 
 func main() {
-	console, err := writeconsole.NewHandle()
+	console, err := consoleinput.NewHandle()
 	if err != nil {
 		println(err.Error())
 		return
