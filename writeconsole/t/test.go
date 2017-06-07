@@ -1,6 +1,10 @@
 package main
 
-import "github.com/zetamatta/experimental/writeconsole"
+import (
+	"os"
+
+	"github.com/zetamatta/experimental/writeconsole"
+)
 
 func main() {
 	console, err := writeconsole.NewHandle()
@@ -8,5 +12,8 @@ func main() {
 		println(err.Error())
 		return
 	}
-	console.WriteString("ls\r")
+	for _, s := range os.Args[1:] {
+		console.WriteString(s)
+		console.WriteRune('\r')
+	}
 }
