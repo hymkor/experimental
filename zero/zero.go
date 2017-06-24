@@ -2,13 +2,14 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-runewidth"
 	"github.com/zetamatta/go-box"
+	"github.com/zetamatta/nyagos/readline"
 )
 
 type Buffer struct {
@@ -39,23 +40,32 @@ type View struct {
 	Height int
 }
 
-func Draw(b *Buffer, v *View, from int, out io.Writer) {
+func Draw(b *Buffer, v *View, from int, out io.Writer) int {
 	w := v.Width
 	h := v.Height
-	for i := 0; i < h; i++ {
+	i := 0
+	for {
 		if from+i >= len(b.Lines) {
-			break
+			return i
 		}
-		text := runewidth.Truncate( b.Lines[from+i], w, "")
+		text := runewidth.Truncate(b.Lines[from+i], w, "")
 		fmt.Fprint(out, text)
-		if runewidth.StringWidth(text) < w {
-			fmt.Fprint(out, "\x1B[2K\n")
+
+		w1 := runewidth.StringWidth(text)
+		if w1 < w {
+			fmt.Fprint(out, "\x1B[0K")
+		}
+		i++
+		if i >= h {
+			return i-1
+		}
+		if w1 < w {
+			fmt.Fprintln(out)
 		}
 	}
 }
 
 func Main() error {
-	console := colorable.NewColorableStdout()
 	v := box.New()
 	// fmt.Fprintf(os.Stderr,"%+v\n",v)
 	view := &View{Width: v.Width, Height: v.Height}
@@ -64,8 +74,23 @@ func Main() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(console, "\x1B[0;0H")
-		Draw(b, view, 0, console)
+		n := Draw(b, view, 0, readline.Console)
+		fmt.Fprintf(readline.Console, "\x1B[%dA\r", n)
+		head := 0
+		y := 0
+		for {
+			editor := readline.Editor{
+				Default: b.Lines[head+y],
+				Cursor:  0,
+				Prompt: func()(int,error){ return 0,nil },
+			}
+			text, err := editor.ReadLine(context.Background())
+			if err != nil {
+				return err
+			}
+			b.Lines[head+y] = text
+			y++
+		}
 	}
 	return nil
 }
