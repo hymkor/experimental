@@ -40,6 +40,17 @@ type View struct {
 	Height int
 }
 
+func DrawLine(line string, v *View, out io.Writer) int {
+	text := runewidth.Truncate(line, v.Width, "")
+	fmt.Fprint(out, text)
+
+	w1 := runewidth.StringWidth(text)
+	if w1 < v.Width {
+		fmt.Fprint(out, "\x1B[0K")
+	}
+	return w1
+}
+
 func Draw(b *Buffer, v *View, from int, out io.Writer) int {
 	w := v.Width
 	h := v.Height
@@ -48,16 +59,10 @@ func Draw(b *Buffer, v *View, from int, out io.Writer) int {
 		if from+i >= len(b.Lines) {
 			return i
 		}
-		text := runewidth.Truncate(b.Lines[from+i], w, "")
-		fmt.Fprint(out, text)
-
-		w1 := runewidth.StringWidth(text)
-		if w1 < w {
-			fmt.Fprint(out, "\x1B[0K")
-		}
+		w1 := DrawLine(b.Lines[from+i], v, out)
 		i++
 		if i >= h {
-			return i-1
+			return i - 1
 		}
 		if w1 < w {
 			fmt.Fprintln(out)
@@ -82,12 +87,15 @@ func Main() error {
 			editor := readline.Editor{
 				Default: b.Lines[head+y],
 				Cursor:  0,
-				Prompt: func()(int,error){ return 0,nil },
+				Prompt:  func() (int, error) { return 0, nil },
 			}
 			text, err := editor.ReadLine(context.Background())
 			if err != nil {
 				return err
 			}
+			fmt.Fprint(readline.Console, "\x1B[1A")
+			DrawLine(text, view, readline.Console)
+			fmt.Fprintln(readline.Console)
 			b.Lines[head+y] = text
 			y++
 		}
