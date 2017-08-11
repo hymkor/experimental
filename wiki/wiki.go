@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"html"
@@ -17,8 +16,20 @@ import (
 	"github.com/russross/blackfriday"
 )
 
-func markdown(w io.Writer, page string) error {
-	markdown, err := ioutil.ReadFile(filepath.Join(".", page))
+func readPage(page string) ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(".", page))
+}
+
+func header(w io.Writer) {
+	fmt.Fprintln(w, "<html><body>")
+}
+
+func footer(w io.Writer) {
+	fmt.Fprintln(w, "</body></html>")
+}
+
+func draw(w io.Writer, page string) error {
+	markdown, err := readPage(page)
 	if err != nil {
 		return err
 	}
@@ -26,24 +37,27 @@ func markdown(w io.Writer, page string) error {
 	template.HTMLEscape(&buffer, markdown)
 	output := blackfriday.MarkdownCommon(buffer.Bytes())
 	// output := blackfriday.MarkdownCommon(markdown)
-	fmt.Fprintln(w, "<html><body>")
 	w.Write(output)
-	fmt.Fprintln(w, "</body></html>")
 	return nil
 }
 
+func markdown(w io.Writer, page string) error {
+	header(w)
+	err := draw(w, page)
+	footer(w)
+	return err
+}
+
 func textfile(w io.Writer, page string) error {
-	fd, err := os.Open(filepath.Join(".", page))
+	data, err := readPage(page)
 	if err != nil {
 		return err
 	}
-	defer fd.Close()
-	scan1 := bufio.NewScanner(fd)
-	fmt.Fprintln(w, "<html><body><pre>")
-	for scan1.Scan() {
-		fmt.Fprintln(w, html.EscapeString(scan1.Text()))
-	}
-	fmt.Fprintln(w, "</pre></body></html>")
+	header(w)
+	fmt.Fprintln(w, "<pre>")
+	fmt.Fprint(w, html.EscapeString(string(data)))
+	fmt.Fprintln(w, "</pre>")
+	footer(w)
 	return nil
 }
 
@@ -57,7 +71,7 @@ func listfile(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(w, "<html><body>")
+	header(w)
 	fmt.Fprintln(w, "<ul>")
 	for _, f := range files {
 		if f.IsDir() {
@@ -68,19 +82,23 @@ func listfile(w io.Writer) error {
 			html.EscapeString(f.Name()))
 	}
 	fmt.Fprintln(w, "</ul>")
-	fmt.Fprintln(w, "</body></html>")
+	footer(w)
 	return nil
 }
 
 func listHandler(w io.Writer, r *http.Request) error {
 	page := path.Base(r.URL.Path)
-	if strings.HasSuffix(page, ".md") {
+
+	if action := r.FormValue("a"); action != "" {
+		if action == "preview" {
+			return preview(w, page)
+		}
+	} else if strings.HasSuffix(page, ".md") {
 		return markdown(w, page)
 	} else if page != "" && page != "." && page != "/" {
 		return textfile(w, page)
-	} else {
-		return listfile(w)
 	}
+	return listfile(w)
 }
 
 func makeHandler(handler func(io.Writer, *http.Request) error) func(http.ResponseWriter, *http.Request) {
