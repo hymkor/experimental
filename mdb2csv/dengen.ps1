@@ -1,8 +1,14 @@
-
 function Get-FieldAll($rs){
-    for($i=0 ; $i -lt $rs.Fields.Count ; $i++ ){
-        Write-Output $rs.Fields.Item($i).Value
+    $fields = $rs.Fields
+    $count = $Fields.Count
+    $buffer = New-Object System.Text.StringBuilder
+    for($i=0 ; $i -lt $count ; $i++ ){
+        if( $i -ne 0 ){
+            [void]$buffer.Append(",")
+        }
+        [void]$buffer.Append($fields.Item($i).Value)
     }
+    return $buffer.ToString()
 }
 
 try{
@@ -16,10 +22,8 @@ try{
     $rs = $db.OpenRecordset("select * from [DENSEN]")
 
     $max=10
-    while( -not $rs.Eof -and $max -gt 0 ){
-        Write-Output (@(Get-FieldAll($rs)) -join ",")
-
-        $max--
+    while( -not $rs.Eof ){
+        Write-Output (Get-FieldAll $rs)
         $rs.MoveNext()
     }
 }finally{
