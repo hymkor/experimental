@@ -7,7 +7,7 @@ import (
 )
 
 func preview(w io.Writer, page string) error {
-	header(w)
+	header(w, page)
 	draw(w, page)
 	fmt.Fprintf(w,
 		`<form name="edit" action="%s" enctype="multipart/form-data" method="post"
