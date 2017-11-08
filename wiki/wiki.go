@@ -20,8 +20,14 @@ func readPage(page string) ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(".", page))
 }
 
-func header(w io.Writer) {
+func header(w io.Writer, page string) {
 	fmt.Fprintln(w, "<html><body>")
+	fmt.Fprintln(w, "<div><a href=\"/\">Index</a>")
+	if page != "" {
+		fmt.Fprintf(w, "<a href=\"/%s?a=preview\">Edit</a>\n",
+			html.EscapeString(page))
+	}
+	fmt.Fprintln(w, "</div>")
 }
 
 func footer(w io.Writer) {
@@ -42,7 +48,7 @@ func draw(w io.Writer, page string) error {
 }
 
 func markdown(w io.Writer, page string) error {
-	header(w)
+	header(w, page)
 	err := draw(w, page)
 	footer(w)
 	return err
@@ -53,7 +59,7 @@ func textfile(w io.Writer, page string) error {
 	if err != nil {
 		return err
 	}
-	header(w)
+	header(w, page)
 	fmt.Fprintln(w, "<pre>")
 	fmt.Fprint(w, html.EscapeString(string(data)))
 	fmt.Fprintln(w, "</pre>")
@@ -71,7 +77,7 @@ func listfile(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	header(w)
+	header(w, "")
 	fmt.Fprintln(w, "<ul>")
 	for _, f := range files {
 		if f.IsDir() {
