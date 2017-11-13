@@ -1,4 +1,8 @@
 *.exe
 *.gz
+*.suo
+*.user
 *.xlsx
 *.zip
+bin/
+obj/
