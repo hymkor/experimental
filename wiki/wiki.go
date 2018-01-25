@@ -24,7 +24,7 @@ func header(w io.Writer, page string) {
 	fmt.Fprintln(w, "<html><body>")
 	fmt.Fprintln(w, "<div><a href=\"/\">Index</a>")
 	if page != "" {
-		fmt.Fprintf(w, "<a href=\"/%s?a=preview\">Edit</a>\n",
+		fmt.Fprintf(w, "<a href=\"/%s?a=edit\">Edit</a>\n",
 			html.EscapeString(page))
 	}
 	fmt.Fprintln(w, "</div>")
@@ -39,6 +39,10 @@ func draw(w io.Writer, page string) error {
 	if err != nil {
 		return err
 	}
+	return drawMarkDown(w, markdown)
+}
+
+func drawMarkDown(w io.Writer, markdown []byte) error {
 	var buffer bytes.Buffer
 	template.HTMLEscape(&buffer, markdown)
 	output := blackfriday.MarkdownCommon(buffer.Bytes())
@@ -96,8 +100,13 @@ func listHandler(w io.Writer, r *http.Request) error {
 	page := path.Base(r.URL.Path)
 
 	if action := r.FormValue("a"); action != "" {
-		if action == "preview" {
-			return preview(w, page)
+		switch strings.ToLower(action) {
+		case "edit":
+			return edit(w, r)
+		case "preview":
+			return preview(w, r)
+		case "commit":
+			return commit(w, r)
 		}
 	} else if strings.HasSuffix(page, ".md") {
 		return markdown(w, page)
