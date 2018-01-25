@@ -12,17 +12,17 @@ import (
 
 func edit_or_preview(w io.Writer, r *http.Request, page string, markdown []byte) {
 	header(w, page)
-	drawMarkDown(w, markdown)
 	fmt.Fprintf(w,
 		`<form name="preview" action="%s" enctype="multipart/form-data" method="post"
   accept-charset="utf8">
-<textarea name="body">%s</textarea>
+<textarea style="width:100%%" cols="80" rows="10" name="body">%s</textarea><br>
 <input type="submit" name="a" value="Preview" />
 <input type="submit" name="a" value="Commit" />
 </form>
 `,
 		html.EscapeString(r.URL.Path),
 		html.EscapeString(string(markdown)))
+	drawMarkDown(w, markdown)
 	footer(w)
 }
 
