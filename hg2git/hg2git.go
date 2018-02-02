@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -17,7 +18,26 @@ const (
 	H_FILES     = "files"
 )
 
-func GetHgLog() (map[string]map[string][]string, error) {
+func GetChangeSetNumber(dic map[string][]string) (int, error) {
+	val, ok := dic[H_CHANGESET]
+	if !ok {
+		return -1, fmt.Errorf("%s not found", H_CHANGESET)
+	}
+	if len(val[0]) <= 0 {
+		return -1, fmt.Errorf("%s is empty", H_CHANGESET)
+	}
+	s := strings.Split(val[0], ":")
+	if len(s) < 2 {
+		return -1, fmt.Errorf("%s invalid format('%s')", H_CHANGESET, val[0])
+	}
+	n, err := strconv.Atoi(s[0])
+	if err != nil {
+		return -1, err
+	}
+	return n, nil
+}
+
+func GetHgLog() (map[int]map[string][]string, error) {
 	cmd1 := exec.Command("hg", "log", "--encoding", "utf8", "-T", "status", "-v")
 	in, err := cmd1.StdoutPipe()
 	if err != nil {
@@ -26,10 +46,13 @@ func GetHgLog() (map[string]map[string][]string, error) {
 	defer in.Close()
 	reader := bufio.NewScanner(in)
 	cmd1.Start()
-	commit := make(map[string]map[string][]string)
+	commit := make(map[int]map[string][]string)
 	dic := make(map[string][]string)
 	for reader.Scan() {
 		line := reader.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		col := strings.SplitN(line, ":", 2)
 		var name string
 		var value []string
@@ -50,16 +73,30 @@ func GetHgLog() (map[string]map[string][]string, error) {
 				value = append(value, text)
 			}
 		}
-		if _, ok := dic[name]; ok {
-			if val2, ok2 := dic[H_CHANGESET]; ok2 && len(val2) > 0 {
-				commit[val2[0]] = dic
+		if name == H_CHANGESET && len(dic) > 0 {
+			n, err := GetChangeSetNumber(dic)
+			if err == nil {
+				commit[n] = dic
+			} else {
+				fmt.Fprintln(os.Stderr, err)
+				for key, val := range dic {
+					fmt.Fprintf(os.Stderr, "  %s=%s\n", key, val)
+				}
 			}
 			dic = make(map[string][]string)
 		}
 		dic[name] = value
 	}
 	if val, ok := dic[H_CHANGESET]; ok && len(val[0]) > 0 {
-		commit[val[0]] = dic
+		n, err := GetChangeSetNumber(dic)
+		if err == nil {
+			commit[n] = dic
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+			for key, val := range dic {
+				fmt.Fprintf(os.Stderr, "  %s=%s\n", key, val)
+			}
+		}
 	}
 	return commit, nil
 }
