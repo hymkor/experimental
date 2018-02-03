@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	H_DATE      = "date"
 	H_DESC      = "description"
 	H_FILES     = "files"
+	H_PARENT    = "parent"
+	H_TAG       = "tag"
 )
 
 func GetChangeSetNumber(dic map[string][]string) (int, error) {
@@ -37,79 +40,97 @@ func GetChangeSetNumber(dic map[string][]string) (int, error) {
 	return n, nil
 }
 
-func GetHgLog() (map[int]map[string][]string, error) {
+func GetHgLog() (chan map[string][]string, error) {
+	ch := make(chan map[string][]string)
 	cmd1 := exec.Command("hg", "log", "--encoding", "utf8", "-T", "status", "-v")
 	in, err := cmd1.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	defer in.Close()
-	reader := bufio.NewScanner(in)
-	cmd1.Start()
-	commit := make(map[int]map[string][]string)
-	dic := make(map[string][]string)
-	for reader.Scan() {
-		line := reader.Text()
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		col := strings.SplitN(line, ":", 2)
-		var name string
-		var value []string
-		if len(col) >= 2 && len(col[1]) > 0 {
-			name = col[0]
-			value = []string{strings.TrimSpace(col[1])}
-		} else {
-			name = col[0]
-			value = []string{}
-			for {
-				if !reader.Scan() {
-					break
-				}
-				text := reader.Text()
-				if text == "" {
-					break
-				}
-				value = append(value, text)
+	err = cmd1.Start()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		defer in.Close()
+
+		reader := bufio.NewScanner(in)
+		dic := make(map[string][]string)
+		for reader.Scan() {
+			line := reader.Text()
+			if strings.TrimSpace(line) == "" {
+				continue
 			}
-		}
-		if name == H_CHANGESET && len(dic) > 0 {
-			n, err := GetChangeSetNumber(dic)
-			if err == nil {
-				commit[n] = dic
+			col := strings.SplitN(line, ":", 2)
+			var name string
+			var value []string
+			if len(col) >= 2 && len(col[1]) > 0 {
+				name = col[0]
+				value = []string{strings.TrimSpace(col[1])}
 			} else {
-				fmt.Fprintln(os.Stderr, err)
-				for key, val := range dic {
-					fmt.Fprintf(os.Stderr, "  %s=%s\n", key, val)
+				name = col[0]
+				value = []string{}
+				for {
+					if !reader.Scan() {
+						break
+					}
+					text := reader.Text()
+					if text == "" {
+						break
+					}
+					value = append(value, text)
 				}
 			}
-			dic = make(map[string][]string)
-		}
-		dic[name] = value
-	}
-	if val, ok := dic[H_CHANGESET]; ok && len(val[0]) > 0 {
-		n, err := GetChangeSetNumber(dic)
-		if err == nil {
-			commit[n] = dic
-		} else {
-			fmt.Fprintln(os.Stderr, err)
-			for key, val := range dic {
-				fmt.Fprintf(os.Stderr, "  %s=%s\n", key, val)
+			if name == H_CHANGESET && len(dic) > 0 {
+				ch <- dic
+				dic = make(map[string][]string)
 			}
+			dic[name] = value
 		}
-	}
-	return commit, nil
+		if val, ok := dic[H_CHANGESET]; ok && len(val[0]) > 0 {
+			ch <- dic
+		}
+		close(ch)
+	}()
+	return ch, nil
 }
 
 func main1() error {
-	log, err := GetHgLog()
+	ch, err := GetHgLog()
 	if err != nil {
 		return err
 	}
-	for _, val := range log {
-		fmt.Printf("ChangeSet=[%s]\n", strings.Join(val[H_CHANGESET], ";"))
-		fmt.Printf("Desc=[%s]\n", strings.Join(val[H_DESC], ";"))
-		fmt.Printf("Files=[%s]\n", strings.Join(val[H_FILES], ";"))
+	for val := range ch {
+		fmt.Printf("  CHANGESET %#v\n", val[H_CHANGESET][0])
+
+		if val1, ok := val[H_PARENT]; ok {
+			for i, par1 := range val1 {
+				fmt.Printf("  PARENT%d %#v\n", i+1, par1)
+			}
+		}
+		if val1, ok := val[H_TAG]; ok {
+			for i, tag1 := range val1 {
+				fmt.Printf("  TAG%d %#v\n", i+1, tag1)
+			}
+		}
+
+		for _, desc1 := range val[H_DESC] {
+			fmt.Printf("  DESC %#v\n", desc1)
+		}
+		for _, do1 := range val[H_FILES] {
+			if do1[1] == 'D' {
+				fmt.Printf("  RM  %#v\n", do1[2:])
+			} else {
+				fmt.Printf("  ADD %#v\n", do1[2:])
+			}
+		}
+
+		time1, err := time.Parse("Mon Jan 2 15:04:05 2006 -0700", val[H_DATE][0])
+		if err == nil {
+			fmt.Printf("  COMMIT --DATE %#v --AUTHOR %#v\n",
+				time1.Format("Mon Jan 2 15:04:05 2006 -0700"),
+				val[H_USER][0])
+		}
 		fmt.Println()
 	}
 	return nil
