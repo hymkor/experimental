@@ -27,7 +27,7 @@ func expand(dir string, pattern string) ([]string, error) {
 				result = append(result, sub...)
 			}
 		} else {
-			m, err := filepath.Match(pattern, f.Name())
+			m, err := match(pattern, f.Name())
 			if err != nil {
 				return nil, err
 			}
