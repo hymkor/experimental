@@ -41,5 +41,9 @@ func expand(dir string, pattern string) ([]string, error) {
 
 func Expand(path1 string) ([]string, error) {
 	index := strings.Index(filepath.ToSlash(path1), "/**/")
-	return expand(path1[:index], path1[index+4:])
+	if index >= 0 {
+		return expand(path1[:index], path1[index+4:])
+	} else {
+		return filepath.Glob(path1)
+	}
 }

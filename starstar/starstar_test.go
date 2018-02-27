@@ -46,5 +46,13 @@ func TestExpand(t *testing.T) {
 	if len(result) != 2 {
 		t.Fatalf("invalid item count: %d", len(result))
 	}
+
+	result, err = Expand("star*")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	for _, f := range result {
+		println(f)
+	}
 	return
 }
