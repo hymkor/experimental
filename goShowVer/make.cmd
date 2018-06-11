@@ -3,9 +3,18 @@ setlocal
     where rsrc >nul || go get github.com/akavel/rsrc
     where rsrc >nul || call :setgobin
     if not exist rsrc.syso rsrc -manifest test.manifest -o rsrc.syso
-    go build -ldflags="-H windowsgui"
+    call :"%1"
 endlocal
 exit /b
+
+:""
+    go build -ldflags="-H windowsgui"
+    exit /b
+
+:"update"
+    go get -u github.com/akavel/rsrc
+    go get -u github.com/lxn/walk
+    exit /b
 
 :setgobin
     setlocal
