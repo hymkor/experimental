@@ -23,33 +23,17 @@ func filter(s string) (string, error) {
 	}), nil
 }
 
-type Header struct {
-	To      []string
-	Cc      []string
-	Subject string
-}
-
-func Make(h *Header, body io.Reader, out io.Writer) error {
-	fmt.Fprintln(out,"Content-Type: text/plain; charset=iso-2022-jp")
-	for _, to := range h.To {
-		text, err := filter(to)
-		if err != nil {
-			return err
+func Make(headers map[string][]string, body io.Reader, out io.Writer) error {
+	fmt.Fprintln(out, "Content-Type: text/plain; charset=iso-2022-jp")
+	for key, header1 := range headers {
+		for _, h1 := range header1 {
+			text, err := filter(h1)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "%s: %s\n", key, text)
 		}
-		fmt.Fprintf(out, "To: %s\n", text)
 	}
-	for _, cc := range h.Cc {
-		text, err := filter(cc)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(out, "Co: %s\n", text)
-	}
-	text, err := filter(h.Subject)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(out, "Subject: %s\n", text)
 	fmt.Fprintln(out)
 
 	sc := bufio.NewScanner(body)
