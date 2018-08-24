@@ -16,5 +16,4 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	os.Exit(0)
 }
